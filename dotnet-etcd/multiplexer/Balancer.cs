@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Etcdserverpb;
 using Grpc.Core;
+using Grpc.Net.Client;
 
 namespace dotnet_etcd.multiplexer
 {
@@ -74,32 +75,39 @@ namespace dotnet_etcd.multiplexer
             _HealthyCluster = new HashSet<Connection>();
             _UnHealthyCluster = new HashSet<Connection>();
 
-
             foreach (Uri node in nodes)
             {
-                Channel channel;
+                GrpcChannel channel;
                 if (_publicRootCa)
                 {
-                    channel = new Channel(node.Host, node.Port, new SslCredentials());
+                    channel = GrpcChannel.ForAddress(node, new GrpcChannelOptions
+                    {
+                        Credentials = new SslCredentials()
+                    });
                 }
                 else if (_clientSSL)
                 {
-                    channel = new Channel(
-                        node.Host,
-                        node.Port,
-                        new SslCredentials(
+                    channel = GrpcChannel.ForAddress(node, new GrpcChannelOptions
+                    {
+                        Credentials = new SslCredentials(
                             _caCert,
                             new KeyCertificatePair(_clientCert, _clientKey)
                         )
-                    );
+                    });
                 }
                 else if (_ssl)
                 {
-                    channel = new Channel(node.Host, node.Port, new SslCredentials(_caCert));
+                    channel = GrpcChannel.ForAddress(node, new GrpcChannelOptions
+                    {
+                        Credentials = new SslCredentials(_caCert)
+                    });
                 }
                 else
                 {
-                    channel = new Channel(node.Host, node.Port, ChannelCredentials.Insecure);
+                    channel = GrpcChannel.ForAddress(node, new GrpcChannelOptions
+                    {
+                        Credentials = ChannelCredentials.Insecure
+                    });
                 }
 
                 Connection connection = new Connection
